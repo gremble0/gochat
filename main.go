@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 )
@@ -28,6 +27,14 @@ type Client struct {
 	Conn net.Conn
 }
 
+func client(client Client, messages chan Message) {
+	// buf := make([]byte, 256)
+	for {
+		// client.Conn.Read(b []byte)
+		messages <- handleSend(client)
+	}
+}
+
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
@@ -35,16 +42,13 @@ func server(messages chan Message) {
 		switch message.Type {
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
-			message.Sender.Conn.Write([]byte(fmt.Sprintf("New user joined with username: %s", message.Sender.Username)))
+			// message.Sender.Conn.Write([]byte(fmt.Sprintf("New user joined with username: %s", message.Sender.Username)))
+			log.Printf("New user joined with username %s", message.Sender.Username)
+
+			go client(message.Sender, messages)
 		case Disconnect:
 		case Send:
-			conn := message.Sender.Conn
-			conn.Write([]byte(message.Text))
-			messages <- Message {
-				Type: Send,
-				Sender: message.Sender,
-				Text: message.Text,
-			}
+			messages <- handleSend(message.Sender)
 		}
 	}
 }
@@ -63,6 +67,32 @@ func handleConnect(conn net.Conn) Client {
 	return Client {
 		Username: string(usernameBuf[0:n]),
 		Conn: conn,
+	}
+}
+
+func handleDisconnect(client Client) Message {
+	log.Printf("User %s @%s has disconnected", client.Username, client.Conn.RemoteAddr())
+	client.Conn.Close()
+
+	return Message {
+		Type: Disconnect,
+		Sender: client,
+	}
+}
+
+func handleSend(client Client) Message {
+	messageBuf := make([]byte, 256)
+	conn := client.Conn
+
+	n, err := conn.Read(messageBuf)
+	if err != nil {
+		return handleDisconnect(client)
+	}
+
+	return Message {
+		Type: Send,
+		Sender: client,
+		Text: string(messageBuf[0:n]),
 	}
 }
 
