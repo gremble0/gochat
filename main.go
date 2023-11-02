@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 )
@@ -29,7 +30,7 @@ type Client struct {
 
 func client(conn net.Conn, messages chan Message) {
 	buf := make([]byte, 256)
-	conn.Write([]byte("Welcome to go-chat! Please enter a username:\n"))
+	conn.Write([]byte("Welcome to go-chat! Please enter a username: "))
 	
 	n, err := conn.Read(buf)
 	if err != nil {
@@ -63,15 +64,6 @@ func client(conn net.Conn, messages chan Message) {
 			Sender: client,
 			Text: string(buf[0:n-1]),
 		}
-
-		_, err = client.Conn.Write(buf[0:n])
-		if err != nil {
-			messages <- Message {
-				Type: Disconnect,
-				Sender: client,
-			}
-			return
-		}
 	}
 }
 
@@ -83,12 +75,27 @@ func server(messages chan Message) {
 
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
-			log.Printf("New user joined with username '%s'\n", message.Sender.Username)
+
+			outstr := "New user joined with username '" + message.Sender.Username + "'\n"
+			log.Printf(outstr)
+
+			for _, client := range clients {
+				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
+					client.Conn.Write([]byte(outstr))
+				}
+			}
 
 		case Disconnect:
-			log.Printf("User '%s'@%s has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
 			message.Sender.Conn.Close()
 			delete(clients, message.Sender.Conn.RemoteAddr().String())
+
+			outstr := fmt.Sprintf("User '%s@%s' has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
+			log.Printf(outstr)
+			for _, client := range clients {
+				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
+					client.Conn.Write([]byte(outstr))
+				}
+			}
 
 		case Send:
 			outStr := message.Sender.Username + ": " + message.Text + "\n"
@@ -96,7 +103,6 @@ func server(messages chan Message) {
 
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
-					log.Printf(client.Conn.RemoteAddr().String() + " " + message.Sender.Conn.RemoteAddr().String())
 					client.Conn.Write([]byte(outStr))
 				}
 			}
