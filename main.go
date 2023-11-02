@@ -27,14 +27,48 @@ type Client struct {
 	Conn net.Conn
 }
 
-func client(client Client, messages chan Message) {
-	for {
-		message := handleSend(client)
-		messages <- message
+func client(conn net.Conn, messages chan Message) {
+	buf := make([]byte, 256)
+	conn.Write([]byte("Welcome to go-chat! Please enter a username:\n"))
+	
+	_, err := conn.Read(buf)
+	if err != nil {
+		log.Printf("Could not read username from: %s\n", conn.RemoteAddr())
+		conn.Close()
+		return
+	}
 
-		_, err := client.Conn.Write([]byte(message.Text))
+	client := Client {
+		Username: string(buf),
+		Conn: conn,
+	}
+
+	messages <- Message {
+		Type: Connect,
+		Sender: client,
+	}
+
+	for {
+		n, err := conn.Read(buf)
 		if err != nil {
-			return
+			messages <- Message {
+				Type: Disconnect,
+				Sender: client,
+			}
+		}
+
+		messages <- Message {
+			Type: Send,
+			Sender: client,
+			Text: string(buf[0:n]),
+		}
+
+		_, err = client.Conn.Write(buf[0:n])
+		if err != nil {
+			messages <- Message {
+				Type: Disconnect,
+				Sender: client,
+			}
 		}
 	}
 }
@@ -44,65 +78,28 @@ func server(messages chan Message) {
 	for {
 		message := <- messages
 		switch message.Type {
+
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 			log.Printf("New user joined with username %s\n", message.Sender.Username)
 
-			go client(message.Sender, messages)
 		case Disconnect:
+			log.Printf("User '%s'@%s has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
+			message.Sender.Conn.Close()
 			delete(clients, message.Sender.Conn.RemoteAddr().String())
+
 		case Send:
 			outStr := message.Sender.Username + ": " + message.Text + "\n"
 			log.Printf(outStr)
+
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
+					log.Printf(client.Conn.RemoteAddr().String() + " " + message.Sender.Conn.RemoteAddr().String())
 					client.Conn.Write([]byte(outStr))
 				}
 			}
+
 		}
-	}
-}
-
-func handleConnect(conn net.Conn) Client {
-	usernameBuf := make([]byte, 20)
-	conn.Write([]byte("Welcome to go-chat! Please enter a username:\n"))
-	
-	n, err := conn.Read(usernameBuf)
-	if err != nil {
-		log.Printf("Could not read username from: %s\n", conn.RemoteAddr())
-		conn.Close()
-		return Client {}
-	}
-
-	return Client {
-		Username: string(usernameBuf[0:n]),
-		Conn: conn,
-	}
-}
-
-func handleDisconnect(client Client) Message {
-	log.Printf("User '%s'@%s has disconnected\n", client.Username, client.Conn.RemoteAddr())
-	client.Conn.Close()
-
-	return Message {
-		Type: Disconnect,
-		Sender: client,
-	}
-}
-
-func handleSend(client Client) Message {
-	messageBuf := make([]byte, 256)
-	conn := client.Conn
-
-	n, err := conn.Read(messageBuf)
-	if err != nil {
-		return handleDisconnect(client)
-	}
-
-	return Message {
-		Type: Send,
-		Sender: client,
-		Text: string(messageBuf[0:n]),
 	}
 }
 
@@ -111,6 +108,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not listen to port %s\n", Port)
 	}
+	log.Printf("go-chat initialized on port %s\n", Port)
 
 	messages := make(chan Message)
 	go server(messages)
@@ -122,9 +120,6 @@ func main() {
 			continue
 		}
 
-		messages <- Message {
-			Type: Connect,
-			Sender: handleConnect(conn),
-		}
+		go client(conn, messages)
 	}
 }
