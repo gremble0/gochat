@@ -28,10 +28,14 @@ type Client struct {
 }
 
 func client(client Client, messages chan Message) {
-	// buf := make([]byte, 256)
 	for {
-		// client.Conn.Read(b []byte)
-		messages <- handleSend(client)
+		message := handleSend(client)
+		messages <- message
+
+		_, err := client.Conn.Write([]byte(message.Text))
+		if err != nil {
+			return
+		}
 	}
 }
 
@@ -46,7 +50,7 @@ func server(messages chan Message) {
 
 			go client(message.Sender, messages)
 		case Disconnect:
-			log.Printf("disconnect\n")
+			delete(clients, message.Sender.Conn.RemoteAddr().String())
 		case Send:
 			outStr := message.Sender.Username + ": " + message.Text + "\n"
 			log.Printf(outStr)
