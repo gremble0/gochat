@@ -42,13 +42,19 @@ func server(messages chan Message) {
 		switch message.Type {
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
-			// message.Sender.Conn.Write([]byte(fmt.Sprintf("New user joined with username: %s", message.Sender.Username)))
-			log.Printf("New user joined with username %s", message.Sender.Username)
+			log.Printf("New user joined with username %s\n", message.Sender.Username)
 
 			go client(message.Sender, messages)
 		case Disconnect:
+			log.Printf("disconnect\n")
 		case Send:
-			messages <- handleSend(message.Sender)
+			outStr := message.Sender.Username + ": " + message.Text + "\n"
+			log.Printf(outStr)
+			for _, client := range clients {
+				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
+					client.Conn.Write([]byte(outStr))
+				}
+			}
 		}
 	}
 }
@@ -71,7 +77,7 @@ func handleConnect(conn net.Conn) Client {
 }
 
 func handleDisconnect(client Client) Message {
-	log.Printf("User %s @%s has disconnected", client.Username, client.Conn.RemoteAddr())
+	log.Printf("User '%s'@%s has disconnected\n", client.Username, client.Conn.RemoteAddr())
 	client.Conn.Close()
 
 	return Message {
