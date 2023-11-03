@@ -11,6 +11,7 @@ const (
 )
 
 type MessageType int
+
 const (
 	Connect = iota + 1
 	Disconnect
@@ -18,20 +19,20 @@ const (
 )
 
 type Message struct {
-	Type MessageType
+	Type   MessageType
 	Sender Client
-	Text string
+	Text   string
 }
 
 type Client struct {
 	Username string
-	Conn net.Conn
+	Conn     net.Conn
 }
 
 func client(conn net.Conn, messages chan Message) {
 	buf := make([]byte, 256)
 	conn.Write([]byte("Welcome to go-chat! Please enter a username: "))
-	
+
 	n, err := conn.Read(buf)
 	if err != nil {
 		log.Printf("Could not read username from: %s\n", conn.RemoteAddr())
@@ -39,30 +40,30 @@ func client(conn net.Conn, messages chan Message) {
 		return
 	}
 
-	client := Client {
-		Username: string(buf[0:n-1]),
-		Conn: conn,
+	client := Client{
+		Username: string(buf[0 : n-1]),
+		Conn:     conn,
 	}
 
-	messages <- Message {
-		Type: Connect,
+	messages <- Message{
+		Type:   Connect,
 		Sender: client,
 	}
 
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			messages <- Message {
-				Type: Disconnect,
+			messages <- Message{
+				Type:   Disconnect,
 				Sender: client,
 			}
 			return
 		}
 
-		messages <- Message {
-			Type: Send,
+		messages <- Message{
+			Type:   Send,
 			Sender: client,
-			Text: string(buf[0:n-1]),
+			Text:   string(buf[0 : n-1]),
 		}
 	}
 }
@@ -70,7 +71,7 @@ func client(conn net.Conn, messages chan Message) {
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
-		message := <- messages
+		message := <-messages
 		switch message.Type {
 
 		case Connect:
@@ -112,7 +113,7 @@ func server(messages chan Message) {
 }
 
 func main() {
-	ln, err := net.Listen("tcp", ":" + Port)
+	ln, err := net.Listen("tcp", ":"+Port)
 	if err != nil {
 		log.Fatalf("Could not listen to port %s\n", Port)
 	}
