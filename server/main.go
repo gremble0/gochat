@@ -24,7 +24,6 @@ const (
 	Send
 )
 
-
 type Message struct {
 	Type   MessageType
 	Sender Client
@@ -36,7 +35,7 @@ type Client struct {
 	Conn     net.Conn
 }
 
-func runClient(conn net.Conn, messages chan Message) {
+func client(conn net.Conn, messages chan Message) {
 	buf := make([]byte, 256)
 	conn.Write([]byte("Welcome to go-chat! Please enter a username: "))
 
@@ -74,6 +73,7 @@ func runClient(conn net.Conn, messages chan Message) {
 		}
 	}
 }
+
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
@@ -85,7 +85,6 @@ func server(messages chan Message) {
 
 			outstr := "New user joined with username '" + message.Sender.Username + "'\n"
 			log.Printf(outstr)
-
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					client.Conn.Write([]byte(outstr))
@@ -107,7 +106,6 @@ func server(messages chan Message) {
 		case Send:
 			outStr := message.Sender.Username + ": " + message.Text + "\n"
 			log.Printf(outStr)
-
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					client.Conn.Write([]byte(outStr))
@@ -135,6 +133,6 @@ func main() {
 			continue
 		}
 
-		go runClient(conn, messages)
+		go client(conn, messages)
 	}
 }
