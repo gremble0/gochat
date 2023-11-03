@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"fmt"
+	"os"
 )
 
 // IDEAS:
@@ -11,10 +12,6 @@ import (
 // - Persistent data storage and logging with postgresql or something similar
 // - Host multiple chats at once
 // - User authentication with usernames and passwords
-
-const (
-	Port = "8080"
-)
 
 type MessageType int
 
@@ -117,6 +114,11 @@ func server(messages chan Message) {
 }
 
 func main() {
+	Port := "8080"
+	if len(os.Args) >= 2 {
+		Port = os.Args[1]
+	}
+	
 	ln, err := net.Listen("tcp", ":"+Port)
 	if err != nil {
 		log.Fatalf("Could not listen to port %s\n", Port)
