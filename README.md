@@ -1,5 +1,5 @@
 # go-chat
-This is a simple multi user chat program written in go.
+This is a simple multi user chat program written in go. It has a sister project [cchat](https://github.com/gremble0/cchat) for connecting to the server.
 
 ## Quick start
 To host the server:
