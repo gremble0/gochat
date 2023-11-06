@@ -12,8 +12,8 @@ go run main.go <port> # hosts server on <port>
 go build main.go
 ./main.go <port>
 ```
-To connect as a client you can do so with any program that allows tcp connections such as netcat or telnet. The program is by default hosted on port 8080, so if you use netcat you could connect like this assuming the server is hosted locally:
+To connect as a client you can do so with any program that allows tcp connections such as netcat, telnet or the designated [cchat](https://github.com/gremble0/cchat) client. The program is by default hosted on port 8080, so if you use netcat you could connect like this assuming the server is hosted locally:
 ```shell
 nc 127.0.0.1 8080
 ```
-For remote hosting simply replace the local ip address with the remote one and everything should work like normal.
+To connect to a remote hosted gochat server simply replace the local ip address with the remote one and everything should work like normal. For instructions on how to connect with the cchat client, see the documentation on that page.
