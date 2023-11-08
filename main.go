@@ -79,11 +79,11 @@ func server(messages chan Message) {
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 
-			outstr := "New user joined with username '" + message.Sender.Username + "'\n"
+			outstr := fmt.Sprintf("CONNECT: New user joined with username '%s'\n", message.Sender.Username);
 			log.Printf(outstr)
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
-					client.Conn.Write([]byte(outstr))
+					go client.Conn.Write([]byte(outstr))
 				}
 			}
 
@@ -91,20 +91,20 @@ func server(messages chan Message) {
 			message.Sender.Conn.Close()
 			delete(clients, message.Sender.Conn.RemoteAddr().String())
 
-			outstr := fmt.Sprintf("User '%s@%s' has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
+			outstr := fmt.Sprintf("DISCONNECT: User '%s@%s' has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
 			log.Printf(outstr)
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
-					client.Conn.Write([]byte(outstr))
+					go client.Conn.Write([]byte(outstr))
 				}
 			}
 
 		case Send:
-			outStr := message.Sender.Username + ": " + message.Text + "\n"
-			log.Printf(outStr)
+			outstr := fmt.Sprintf("SEND: %s: %s\n", message.Sender.Username, message.Text);
+			log.Printf(outstr)
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
-					client.Conn.Write([]byte(outStr))
+					go client.Conn.Write([]byte(outstr))
 				}
 			}
 
