@@ -33,7 +33,7 @@ type Client struct {
 
 func client(conn net.Conn, messages chan Message) {
 	buf := make([]byte, 256)
-	conn.Write([]byte("Welcome to go-chat! Please enter a username: "))
+	conn.Write([]byte("SERVER_INFO: Welcome to go-chat! Please enter a username: "))
 
 	n, err := conn.Read(buf)
 	if err != nil {
@@ -70,6 +70,7 @@ func client(conn net.Conn, messages chan Message) {
 	}
 }
 
+// TODO: normalize format for sending messages to cchat
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
