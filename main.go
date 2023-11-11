@@ -70,7 +70,7 @@ func client(conn net.Conn, messages chan Message) {
 	}
 }
 
-// TODO: normalize format for sending messages to cchat
+// TODO: normalize format for sending messages to cchat, json?
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
@@ -80,7 +80,7 @@ func server(messages chan Message) {
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 
-			outstr := fmt.Sprintf("CONNECT: New user joined with username '%s'\n", message.Sender.Username);
+			outstr := fmt.Sprintf("CONNECT: New user joined with username '%s'\n", message.Sender.Username)
 			log.Printf(outstr)
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
@@ -101,7 +101,7 @@ func server(messages chan Message) {
 			}
 
 		case Send:
-			outstr := fmt.Sprintf("SEND: %s: %s\n", message.Sender.Username, message.Text);
+			outstr := fmt.Sprintf("SEND: %s: %s\n", message.Sender.Username, message.Text)
 			log.Printf(outstr)
 			for _, client := range clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
