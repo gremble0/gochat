@@ -1,21 +1,24 @@
-CREATE DATABASE gochat
-    WITH OWNER DEFAULT
-    ENCODING = 'UTF8';
+-- Create database
+CREATE DATABASE gochat;
 
 COMMENT ON DATABASE gochat
     IS 'Database for managing users and messages for gochat';
 
+-- Connect to database
+\c gochat
+
+-- Initialize tables
 CREATE TABLE users (
-    user_id serial PRIMARY KEY,
+    user_id BIGSERIAL NOT NULL PRIMARY KEY,
     username VARCHAR (20) NOT NULL,
     remote_addr VARCHAR (64) NOT NULL,
-    registered TIMESTAMP NOT NULL
+    registered TIMESTAMP
 );
 
--- Maybe combination of user and timestamp for primary key?
 CREATE TABLE messages (
-    message_id serial PRIMARY KEY,
+    message_id BIGSERIAL NOT NULL  PRIMARY KEY,
     message VARCHAR (255) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (user_id),
-    sent TIMESTAMP NOT NULL
+    user_id INT NOT NULL,
+    sent TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
