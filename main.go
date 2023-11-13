@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net"
 	"os"
+
+	_ "github.com/lib/pq"
 )
 
 // IDEAS:
@@ -15,9 +18,9 @@ import (
 type MessageType int
 
 const (
-	Connect = iota + 1
-	Disconnect
-	Send
+	Connect = iota
+	Disconnect = iota
+	Send = iota
 )
 
 type Message struct {
@@ -113,12 +116,34 @@ func server(messages chan Message) {
 	}
 }
 
+func dbConnect(host string, port int, user string, password string, dbname string, sslmode string) {
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal("Could not connect to database\n")
+	}
+	defer db.Close()
+	
+	rows, _ := db.Query("SELECT * FROM users")
+	for rows.Next() {
+
+	}
+}
+
 func main() {
-	Port := "8080"
+	Port := "8080" // Default port unless set by cmd args
+	psqlUsername := "postgres" // Default psql user unless set by cmd args
 	if len(os.Args) >= 2 {
-		Port = os.Args[1]
+        psqlUsername = os.Args[1]
+
+		if len(os.Args) >= 3 {
+			Port = os.Args[2]
+		}
 	}
 
+	dbConnect("localhost", 5432, psqlUsername, "", "gochat", "disable")
+		
+	// Start listening for tcp connections at `Port`
 	ln, err := net.Listen("tcp", ":"+Port)
 	if err != nil {
 		log.Fatalf("Could not listen to port %s\n", Port)
