@@ -1,5 +1,9 @@
 CREATE DATABASE gochat
-    WITH OWNER DEFAULT;
+    WITH OWNER DEFAULT
+    ENCODING = 'UTF8';
+
+COMMENT ON DATABASE gochat
+    IS 'Database for managing users and messages for gochat';
 
 CREATE TABLE users (
     user_id serial PRIMARY KEY,
@@ -12,5 +16,6 @@ CREATE TABLE users (
 CREATE TABLE messages (
     message_id serial PRIMARY KEY,
     message VARCHAR (255) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    FOREIGN KEY (user_id) REFERENCES users (user_id),
+    sent TIMESTAMP NOT NULL
 );
