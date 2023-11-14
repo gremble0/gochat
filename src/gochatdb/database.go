@@ -1,5 +1,4 @@
-package main
-// TODO package database
+package gochatdb
 
 import (
 	"database/sql"

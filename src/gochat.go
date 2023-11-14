@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"os"
+
+	"github.com/gremble0/gochat/gochatdb"
 )
 
 // IDEAS:

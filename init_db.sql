@@ -16,7 +16,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE messages (
-    message_id BIGSERIAL NOT NULL  PRIMARY KEY,
+    message_id BIGSERIAL NOT NULL PRIMARY KEY,
     message VARCHAR (255) NOT NULL,
     user_id INT NOT NULL,
     sent TIMESTAMP,
