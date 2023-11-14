@@ -130,8 +130,9 @@ type DBConfig struct {
 }
 
 func dbConnect(DBConf DBConfig) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		DBConf.Host, DBConf.Port, DBConf.User, DBConf.Password, DBConf.DBName)
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Could not connect to database\n")
@@ -142,15 +143,19 @@ func dbConnect(DBConf DBConfig) {
 	if err != nil {
 		panic(err)
 	}
-
-	// rows, _ := db.Query("SELECT * FROM users")
-	// for rows.Next() {
-
-	// }
 }
 
 func usage() {
-	fmt.Printf("%s <gochat-port> <psql-host> <psql-port> <psql-user> <psql-password> <psql-dbname>\n", os.Args[0])
+	fmt.Printf("Usage: %s [OPTION]...\n", os.Args[0])
+	fmt.Printf("    --help               display this help message\n")
+	fmt.Printf("    -gp <port>          set the port for gochat to listen to connections on\n")
+	fmt.Printf("    -hn <hostname>      set the hostname for the postgres database connection\n")
+	fmt.Printf("    -u  <username>      set the username for the postgres database connection\n")
+	fmt.Printf("    -sp <port>          set the port for the postgres database connection\n")
+	fmt.Printf("    -w  <password>      set the password for the postgres database connection (NB: NOT SECURE)\n")
+	fmt.Printf("    -n  <database name> set the database name for the postgres database connection\n")
+
+	os.Exit(1)
 }
 
 func parseConfig(args []string) GochatConfig {
@@ -166,15 +171,17 @@ func parseConfig(args []string) GochatConfig {
 		},
 	}
 
-	for i := 1; i < len(args); i++ {
-		if i == len(args)-1 {
-			log.Printf("%s\n", args[i])
+	for i := 1; i < len(args); i = i + 2 {
+		if i == len(args) - 1 {
 			log.Fatal("Provided flag without argument\n")
 		}
+
 		switch args[i] {
+		case "--help":
+			usage()
 		case "-gp":
 			ret.Port = args[i+1]
-		case "-h":
+		case "-hn":
 			ret.DBConf.Host = args[i+1]
 		case "-u":
 			ret.DBConf.User = args[i+1]
