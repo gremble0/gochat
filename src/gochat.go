@@ -74,12 +74,16 @@ func parseConfig(args []string) GochatConfig {
 func main() {
 	Conf := parseConfig(os.Args)
 
-	dbConnect(Conf.DBConf)
+	// Initialize database
+	_, err := dbConnect(Conf.DBConf)
+	if err != nil {
+		log.Fatalf("Could not connect to database: %s\n", err)
+	}
 
-	// Start listening for tcp connections at `Port`
+	// Start listening for tcp connections at `Conf.Port`
 	ln, err := net.Listen("tcp", ":"+Conf.Port)
 	if err != nil {
-		log.Fatalf("Could not listen to port %s\n", Conf.Port)
+		log.Fatalf("Could not listen to port %s: %s\n", Conf.Port, err)
 	}
 	log.Printf("go-chat initialized on port %s\n", Conf.Port)
 
@@ -89,7 +93,7 @@ func main() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Printf("Could not accept connection from %s\n", conn)
+			log.Printf("Could not accept connection from %s: %s\n", conn, err)
 			continue
 		}
 
