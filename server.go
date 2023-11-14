@@ -6,12 +6,15 @@ import (
 	"net"
 )
 
+const Bufsize int = 256
+
+// enum for types of messages
 type MessageType int
 
 const (
-	Connect    = iota
-	Disconnect = iota
-	Send       = iota
+	Connect    MessageType = iota
+	Disconnect MessageType = iota
+	Send       MessageType = iota
 )
 
 type Message struct {
@@ -21,12 +24,13 @@ type Message struct {
 }
 
 type Client struct {
-	Username string
+	Username string // Not unique, TODO: make usernames unique (would also have to change DB)
 	Conn     net.Conn
 }
 
+// Handles initial connection and event loop for every connected client
 func client(conn net.Conn, messages chan Message) {
-	buf := make([]byte, 256)
+	buf := make([]byte, Bufsize)
 	conn.Write([]byte("SERVER_INFO: Welcome to go-chat! Please enter a username: "))
 
 	n, err := conn.Read(buf)
@@ -65,12 +69,14 @@ func client(conn net.Conn, messages chan Message) {
 }
 
 // TODO: normalize format for sending messages to cchat, json?
+// Handles event loop for every connected client
 func server(messages chan Message) {
 	clients := map[string]*Client{}
 	for {
 		message := <-messages
 		switch message.Type {
 
+		// New client connected
 		case Connect:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 
@@ -82,6 +88,7 @@ func server(messages chan Message) {
 				}
 			}
 
+		// Client has disconnected
 		case Disconnect:
 			message.Sender.Conn.Close()
 			delete(clients, message.Sender.Conn.RemoteAddr().String())
@@ -94,6 +101,7 @@ func server(messages chan Message) {
 				}
 			}
 
+		// Client has sent a message
 		case Send:
 			outstr := fmt.Sprintf("SEND: %s: %s\n", message.Sender.Username, message.Text)
 			log.Printf(outstr)
