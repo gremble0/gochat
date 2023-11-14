@@ -5,12 +5,9 @@ import (
 	"log"
 	"net"
 	"os"
-
-	"github.com/gremble0/gochat/gochatdb"
 )
 
 // IDEAS:
-// - Persistent data storage and logging with postgresql or something similar
 // - Host multiple chats at once
 // - User authentication with usernames and passwords
 

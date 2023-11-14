@@ -1,4 +1,4 @@
-package gochatdb
+package main
 
 import (
 	"database/sql"
