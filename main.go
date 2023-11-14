@@ -18,9 +18,9 @@ import (
 type MessageType int
 
 const (
-	Connect = iota
+	Connect    = iota
 	Disconnect = iota
-	Send = iota
+	Send       = iota
 )
 
 type Message struct {
@@ -116,39 +116,93 @@ func server(messages chan Message) {
 	}
 }
 
-func dbConnect(host string, port int, user string, password string, dbname string, sslmode string) {
-	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, sslmode)
+type GochatConfig struct {
+	Port   string
+	DBConf DBConfig
+}
+
+type DBConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string // NB: Not particularly safe
+	DBName   string
+}
+
+func dbConnect(DBConf DBConfig) {
+	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		DBConf.Host, DBConf.Port, DBConf.User, DBConf.Password, DBConf.DBName)
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Could not connect to database\n")
 	}
 	defer db.Close()
-	
-	rows, _ := db.Query("SELECT * FROM users")
-	for rows.Next() {
 
+	err = db.Ping()
+	if err != nil {
+		panic(err)
 	}
+
+	// rows, _ := db.Query("SELECT * FROM users")
+	// for rows.Next() {
+
+	// }
 }
 
-func main() {
-	Port := "8080" // Default port unless set by cmd args
-	psqlUsername := "postgres" // Default psql user unless set by cmd args
-	if len(os.Args) >= 2 {
-        psqlUsername = os.Args[1]
+func usage() {
+	fmt.Printf("%s <gochat-port> <psql-host> <psql-port> <psql-user> <psql-password> <psql-dbname>\n", os.Args[0])
+}
 
-		if len(os.Args) >= 3 {
-			Port = os.Args[2]
+func parseConfig(args []string) GochatConfig {
+	// Set some defaults for the config
+	ret := GochatConfig{
+		"8080",
+		DBConfig{
+			"localhost",
+			"5432",
+			"postgres",
+			"",
+			"gochat",
+		},
+	}
+
+	for i := 1; i < len(args); i++ {
+		if i == len(args)-1 {
+			log.Printf("%s\n", args[i])
+			log.Fatal("Provided flag without argument\n")
+		}
+		switch args[i] {
+		case "-gp":
+			ret.Port = args[i+1]
+		case "-h":
+			ret.DBConf.Host = args[i+1]
+		case "-u":
+			ret.DBConf.User = args[i+1]
+		case "-sp":
+			ret.DBConf.Port = args[i+1]
+		case "-w":
+			ret.DBConf.Password = args[i+1]
+		case "-n":
+			ret.DBConf.DBName = args[i+1]
+		default:
+			log.Fatalf("Provided unknown flag '%s'\n", args[i])
 		}
 	}
 
-	dbConnect("localhost", 5432, psqlUsername, "", "gochat", "disable")
-		
+	return ret
+}
+
+func main() {
+	Conf := parseConfig(os.Args)
+
+	dbConnect(Conf.DBConf)
+
 	// Start listening for tcp connections at `Port`
-	ln, err := net.Listen("tcp", ":"+Port)
+	ln, err := net.Listen("tcp", ":"+Conf.Port)
 	if err != nil {
-		log.Fatalf("Could not listen to port %s\n", Port)
+		log.Fatalf("Could not listen to port %s\n", Conf.Port)
 	}
-	log.Printf("go-chat initialized on port %s\n", Port)
+	log.Printf("go-chat initialized on port %s\n", Conf.Port)
 
 	messages := make(chan Message)
 	go server(messages)
