@@ -6,21 +6,25 @@ This is a simple multi user chat program written in go. It has a sister project 
 go-chat uses a postgresql to store data. This database needs to be initialized before you can run the server. To run the database locally simply connect to the postgres service on your machine, and run the file `init_db.sql`:
 ```shell
 $ psql -U <username>
-<username>=# \i init_db.sql
-...
+$ \i init_db.sql
 ```
-This should create the database on your local machine (remote server hosting for database is currently unsupported), and you are now ready to host the server.
+This should create the database on your local machine and you are now ready to host the server.
 
 ### Hosting the server
+To host the server with the preconfigured defaults you can run the following command:
 ```shell
-go run main.go # hosts server on port 8080
-# or
-go run main.go <port> # hosts server on <port>
-
-# or
-go build main.go
-./main <port>
+make run
 ```
+If you would like to change the configuration for the server you can run the following command:
+```shell
+make build
+```
+and add any desired command line arguments to the executable. For more information on how to configure the server:
+```shell
+./gochat --help
+```
+
+### Connecting to the server
 To connect as a client you can do so with any program that allows tcp connections such as netcat, telnet or the designated [cchat](https://github.com/gremble0/cchat) client. The program is by default hosted on port 8080, so if you use netcat you could connect like this assuming the server is hosted locally:
 ```shell
 nc 127.0.0.1 8080
