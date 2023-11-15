@@ -87,8 +87,8 @@ func main() {
 	}
 	log.Printf("go-chat initialized on port %s\n", Conf.Port)
 
-	messages := make(chan Message)
-	go server(messages)
+	server := Start()
+	go server.Run()
 
 	for {
 		conn, err := ln.Accept()
@@ -97,6 +97,6 @@ func main() {
 			continue
 		}
 
-		go Connect(conn, messages)
+		go Connect(conn, server.Messages)
 	}
 }

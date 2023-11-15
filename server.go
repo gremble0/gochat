@@ -29,6 +29,11 @@ type Client struct {
 	Conn     net.Conn
 }
 
+type Server struct {
+	Clients  map[string]*Client
+	Messages chan Message
+}
+
 // Handles initial connection for newly registered client, if establishment of connection
 // fails, close the connection and ignore
 func Connect(conn net.Conn, messages chan Message) {
@@ -83,21 +88,29 @@ func (client Client) Run(messages chan Message) {
 	}
 }
 
+func Start() Server {
+	server := Server{
+		Clients:  map[string]*Client{},
+		Messages: make(chan Message),
+	}
+
+	return server
+}
+
 // TODO: normalize format for sending messages to cchat, json?
-// Handles event loop for every connected client
-func server(messages chan Message) {
-	clients := map[string]*Client{}
+// Handles event loop for the server managing forwarding of messages to clients
+func (server Server) Run() {
 	for {
-		message := <-messages
+		message := <-server.Messages
 		switch message.Type {
 
 		// New client connected
 		case NewConnection:
-			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
+			server.Clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 
 			outstr := fmt.Sprintf("CONNECT: New user joined with username '%s'\n", message.Sender.Username)
 			log.Printf(outstr)
-			for _, client := range clients {
+			for _, client := range server.Clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					go client.Conn.Write([]byte(outstr))
 				}
@@ -106,11 +119,11 @@ func server(messages chan Message) {
 		// Client has disconnected
 		case Disconnect:
 			message.Sender.Conn.Close()
-			delete(clients, message.Sender.Conn.RemoteAddr().String())
+			delete(server.Clients, message.Sender.Conn.RemoteAddr().String())
 
 			outstr := fmt.Sprintf("DISCONNECT: User '%s@%s' has disconnected\n", message.Sender.Username, message.Sender.Conn.RemoteAddr())
 			log.Printf(outstr)
-			for _, client := range clients {
+			for _, client := range server.Clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					go client.Conn.Write([]byte(outstr))
 				}
@@ -120,7 +133,7 @@ func server(messages chan Message) {
 		case Send:
 			outstr := fmt.Sprintf("SEND: %s: %s\n", message.Sender.Username, message.Text)
 			log.Printf(outstr)
-			for _, client := range clients {
+			for _, client := range server.Clients {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					go client.Conn.Write([]byte(outstr))
 				}
