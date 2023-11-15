@@ -55,10 +55,12 @@ func (gcdb *GochatDB) LogConnection(message Message) error {
 }
 
 func (gcdb *GochatDB) LogMessage(message Message) error {
-	cmd := `INSERT INTO messages(message, sent) VALUES($1, $2)`
+	cmd := `INSERT INTO messages(message, sender, sender_addr, sent) VALUES($1, $2, $3, $4)`
 
 	_, err := gcdb.DB.Exec(cmd,
 		message.Text,
+		message.Sender.Username,
+		message.Sender.Conn.RemoteAddr().String(),
 		time.Now().Format(TimeFormat),
 	)
 

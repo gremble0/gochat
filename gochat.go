@@ -7,6 +7,7 @@ import (
 )
 
 // IDEAS:
+// - Send recent messages from database to new connections
 // - Host multiple chats at once
 // - User authentication with usernames and passwords
 
