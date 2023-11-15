@@ -3,9 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 )
+
+const TimeFormat = "2006-01-02 15:04:05"
 
 type DBConfig struct {
 	Host     string
@@ -15,23 +18,49 @@ type DBConfig struct {
 	DBName   string
 }
 
-func dbConnect(DBConf DBConfig) (*sql.DB, error)  {
+type GochatDB struct {
+	DB *sql.DB
+}
+
+func dbConnect(dbc DBConfig) (*GochatDB, error) {
 	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable",
-		DBConf.Host, DBConf.Port, DBConf.User, DBConf.DBName)
-	if DBConf.Password != "" {
-		connStr += "password=" + DBConf.Password
+		dbc.Host, dbc.Port, dbc.User, dbc.DBName)
+	if dbc.Password != "" {
+		connStr += "password=" + dbc.Password
 	}
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
-	return db, nil
+	return &GochatDB{DB: db}, nil
+}
+
+func (gcdb *GochatDB) LogConnection(message Message) error {
+	cmd := `INSERT INTO users(username, remote_addr, registered) VALUES($1, $2, $3)`
+
+	_, err := gcdb.DB.Exec(cmd,
+		message.Sender.Username,
+		message.Sender.Conn.RemoteAddr().String(),
+		time.Now().Format(TimeFormat),
+	)
+
+	return err
+}
+
+func (gcdb *GochatDB) LogMessage(message Message) error {
+	cmd := `INSERT INTO messages(message, sent) VALUES($1, $2)`
+
+	_, err := gcdb.DB.Exec(cmd,
+		message.Text,
+		time.Now().Format(TimeFormat),
+	)
+
+	return err
 }

@@ -11,8 +11,8 @@ import (
 // - User authentication with usernames and passwords
 
 type GochatConfig struct {
-	Port   string
-	DBConf DBConfig
+	Port string
+	dbc  DBConfig
 }
 
 func usage() {
@@ -31,8 +31,8 @@ func usage() {
 func parseConfig(args []string) GochatConfig {
 	// Set some defaults for the config
 	ret := GochatConfig{
-		"8080",
-		DBConfig{
+		Port: "8080",
+		dbc: DBConfig{
 			"localhost",
 			"5432",
 			"postgres",
@@ -52,15 +52,15 @@ func parseConfig(args []string) GochatConfig {
 		case "-gp":
 			ret.Port = args[i+1]
 		case "-hn":
-			ret.DBConf.Host = args[i+1]
+			ret.dbc.Host = args[i+1]
 		case "-u":
-			ret.DBConf.User = args[i+1]
+			ret.dbc.User = args[i+1]
 		case "-sp":
-			ret.DBConf.Port = args[i+1]
+			ret.dbc.Port = args[i+1]
 		case "-w":
-			ret.DBConf.Password = args[i+1]
+			ret.dbc.Password = args[i+1]
 		case "-n":
-			ret.DBConf.DBName = args[i+1]
+			ret.dbc.DBName = args[i+1]
 		default:
 			log.Fatalf("Provided unknown flag '%s'\n", args[i])
 		}
@@ -73,14 +73,14 @@ func main() {
 	conf := parseConfig(os.Args)
 
 	// Initialize database
-	_, err := dbConnect(conf.DBConf)
+	db, err := dbConnect(conf.dbc)
 	if err != nil {
 		log.Fatalf("Could not connect to database: %s\n", err)
 	}
-	log.Printf("Successfully connected to the '%s' database\n", conf.DBConf.DBName)
+	log.Printf("Successfully connected to the '%s' database\n", conf.dbc.DBName)
 
 	// Initialize server
-	server, err := Start(conf)
+	server, err := Start(conf, db)
 	if err != nil {
 		log.Fatalf("Could not listen to port %s: %s\n", conf.Port, err)
 	}

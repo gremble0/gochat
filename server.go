@@ -33,6 +33,7 @@ type Server struct {
 	Clients  map[string]*Client
 	Messages chan Message
 	Listener net.Listener
+	DB       *GochatDB
 }
 
 // Handles initial connection for newly registered client, if establishment of connection
@@ -89,10 +90,11 @@ func (client Client) Run(server Server) {
 	}
 }
 
-func Start(conf GochatConfig) (*Server, error) {
+func Start(conf GochatConfig, db *GochatDB) (*Server, error) {
 	server := &Server{
 		Clients:  map[string]*Client{},
 		Messages: make(chan Message),
+		DB: db,
 	}
 
 	// Start listening for tcp connections at `Conf.Port`
@@ -139,6 +141,11 @@ func (server Server) Run() {
 				}
 			}
 
+			err := server.DB.LogConnection(message)
+			if err != nil {
+				log.Printf("Could not log new connection database: %s\n", err)
+			}
+
 		// Client has disconnected
 		case Disconnect:
 			message.Sender.Conn.Close()
@@ -160,6 +167,11 @@ func (server Server) Run() {
 				if client.Conn.RemoteAddr().String() != message.Sender.Conn.RemoteAddr().String() {
 					go client.Conn.Write([]byte(outstr))
 				}
+			}
+
+			err := server.DB.LogMessage(message)
+			if err != nil {
+				log.Printf("Could not log message to database: %s\n", err)
 			}
 
 		}
