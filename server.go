@@ -12,9 +12,9 @@ const Bufsize int = 256
 type MessageType int
 
 const (
-	Connect    MessageType = iota
-	Disconnect MessageType = iota
-	Send       MessageType = iota
+	NewConnection MessageType = iota
+	Disconnect    MessageType = iota
+	Send          MessageType = iota
 )
 
 type Message struct {
@@ -24,34 +24,49 @@ type Message struct {
 }
 
 type Client struct {
+	Buffer   []byte
 	Username string // Not unique, TODO: make usernames unique (would also have to change DB)
 	Conn     net.Conn
 }
 
-// Handles initial connection and event loop for every connected client
-func client(conn net.Conn, messages chan Message) {
-	buf := make([]byte, Bufsize)
-	conn.Write([]byte("SERVER_INFO: Welcome to go-chat! Please enter a username: "))
+// Handles initial connection for newly registered client, if establishment of connection
+// fails, close the connection and ignore
+func Connect(conn net.Conn, messages chan Message) {
+	client := Client{
+		Buffer: make([]byte, Bufsize),
+		Conn:   conn,
+	}
 
-	n, err := conn.Read(buf)
+	_, err := client.Conn.Write([]byte("SERVER_INFO: Welcome to go-chat! Please enter a username: "))
+	if err != nil {
+		log.Printf("Could not write to: %s\n", conn.RemoteAddr())
+		conn.Close()
+		return
+	}
+
+	n, err := conn.Read(client.Buffer)
 	if err != nil {
 		log.Printf("Could not read username from: %s\n", conn.RemoteAddr())
 		conn.Close()
 		return
 	}
 
-	client := Client{
-		Username: string(buf[0 : n-1]),
-		Conn:     conn,
-	}
+	client.Username = string(client.Buffer[0 : n-1])
 
+	// Notify other clients of new connection
 	messages <- Message{
-		Type:   Connect,
+		Type:   NewConnection,
 		Sender: client,
 	}
 
+	// Start event loop for client
+	go client.Run(messages)
+}
+
+// Handles event loop for client
+func (client Client) Run(messages chan Message) {
 	for {
-		n, err := conn.Read(buf)
+		n, err := client.Conn.Read(client.Buffer)
 		if err != nil {
 			messages <- Message{
 				Type:   Disconnect,
@@ -63,7 +78,7 @@ func client(conn net.Conn, messages chan Message) {
 		messages <- Message{
 			Type:   Send,
 			Sender: client,
-			Text:   string(buf[0 : n-1]),
+			Text:   string(client.Buffer[0 : n-1]),
 		}
 	}
 }
@@ -77,7 +92,7 @@ func server(messages chan Message) {
 		switch message.Type {
 
 		// New client connected
-		case Connect:
+		case NewConnection:
 			clients[message.Sender.Conn.RemoteAddr().String()] = &message.Sender
 
 			outstr := fmt.Sprintf("CONNECT: New user joined with username '%s'\n", message.Sender.Username)

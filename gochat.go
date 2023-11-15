@@ -43,7 +43,7 @@ func parseConfig(args []string) GochatConfig {
 	}
 
 	for i := 1; i < len(args); i = i + 2 {
-		if i == len(args) - 1 {
+		if i == len(args)-1 {
 			log.Fatalf("Provided flag without argument\n")
 		}
 
@@ -97,6 +97,6 @@ func main() {
 			continue
 		}
 
-		go client(conn, messages)
+		go Connect(conn, messages)
 	}
 }
