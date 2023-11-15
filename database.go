@@ -16,8 +16,11 @@ type DBConfig struct {
 }
 
 func dbConnect(DBConf DBConfig) (*sql.DB, error)  {
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		DBConf.Host, DBConf.Port, DBConf.User, DBConf.Password, DBConf.DBName)
+	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable",
+		DBConf.Host, DBConf.Port, DBConf.User, DBConf.DBName)
+	if DBConf.Password != "" {
+		connStr += "password=" + DBConf.Password
+	}
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

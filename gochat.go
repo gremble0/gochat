@@ -78,6 +78,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to database: %s\n", err)
 	}
+	log.Printf("Successfully connected to the '%s' database\n", Conf.DBConf.DBName)
 
 	// Start listening for tcp connections at `Conf.Port`
 	ln, err := net.Listen("tcp", ":"+Conf.Port)
