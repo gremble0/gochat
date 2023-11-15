@@ -32,11 +32,12 @@ type Client struct {
 type Server struct {
 	Clients  map[string]*Client
 	Messages chan Message
+	Listener net.Listener
 }
 
 // Handles initial connection for newly registered client, if establishment of connection
 // fails, close the connection and ignore
-func Connect(conn net.Conn, messages chan Message) {
+func Connect(conn net.Conn, server Server) {
 	client := Client{
 		Buffer: make([]byte, Bufsize),
 		Conn:   conn,
@@ -59,28 +60,28 @@ func Connect(conn net.Conn, messages chan Message) {
 	client.Username = string(client.Buffer[0 : n-1])
 
 	// Notify other clients of new connection
-	messages <- Message{
+	server.Messages <- Message{
 		Type:   NewConnection,
 		Sender: client,
 	}
 
 	// Start event loop for client
-	go client.Run(messages)
+	go client.Run(server)
 }
 
 // Handles event loop for client
-func (client Client) Run(messages chan Message) {
+func (client Client) Run(server Server) {
 	for {
 		n, err := client.Conn.Read(client.Buffer)
 		if err != nil {
-			messages <- Message{
+			server.Messages <- Message{
 				Type:   Disconnect,
 				Sender: client,
 			}
 			return
 		}
 
-		messages <- Message{
+		server.Messages <- Message{
 			Type:   Send,
 			Sender: client,
 			Text:   string(client.Buffer[0 : n-1]),
@@ -88,18 +89,40 @@ func (client Client) Run(messages chan Message) {
 	}
 }
 
-func Start() Server {
-	server := Server{
+func Start(conf GochatConfig) (*Server, error) {
+	server := &Server{
 		Clients:  map[string]*Client{},
 		Messages: make(chan Message),
 	}
 
-	return server
+	// Start listening for tcp connections at `Conf.Port`
+	listener, err := net.Listen("tcp", ":"+conf.Port)
+	if err != nil {
+		return nil, err
+	}
+
+	server.Listener = listener
+
+	return server, nil
+}
+
+func (server Server) Accept() {
+	for {
+		conn, err := server.Listener.Accept()
+		if err != nil {
+			log.Printf("Could not accept connection from %s: %s\n", conn, err)
+			continue
+		}
+
+		go Connect(conn, server)
+	}
 }
 
 // TODO: normalize format for sending messages to cchat, json?
 // Handles event loop for the server managing forwarding of messages to clients
 func (server Server) Run() {
+	go server.Accept()
+
 	for {
 		message := <-server.Messages
 		switch message.Type {
