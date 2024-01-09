@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
+// TODO: normalize format for sending messages to cchat, json?
+
 const Bufsize int = 256
 
 // enum for types of messages
@@ -17,18 +19,23 @@ const (
 	Send          MessageType = iota
 )
 
+// Message contains information about communication between the server and a client
+// or a client broadcasting a message to other clients
 type Message struct {
 	Type   MessageType
 	Sender Client
 	Text   string
 }
 
+// Client is a representation of someone connected to the server
 type Client struct {
 	Buffer   []byte
 	Username string // Not unique, TODO: make usernames unique (would also have to change DB)
 	Conn     net.Conn
 }
 
+// Server contains information about all connected clients as well as
+// means of logging and accepting new connections
 type Server struct {
 	Clients  map[string]*Client
 	Messages chan Message
@@ -36,8 +43,8 @@ type Server struct {
 	DB       *GochatDB
 }
 
-// Handles initial connection for newly registered client, if establishment of connection
-// fails, close the connection and ignore
+// Connect handles initial connection for newly registered client, if
+// establishment of connection fails, close the connection and ignore it
 func Connect(conn net.Conn, server Server) {
 	client := Client{
 		Buffer: make([]byte, Bufsize),
@@ -70,7 +77,7 @@ func Connect(conn net.Conn, server Server) {
 	go client.Run(server)
 }
 
-// Handles event loop for client
+// Run handles event loop for one client and is meant to be used as a goroutine
 func (client Client) Run(server Server) {
 	for {
 		n, err := client.Conn.Read(client.Buffer)
@@ -90,11 +97,13 @@ func (client Client) Run(server Server) {
 	}
 }
 
+// Start starts up an empty server based on some configuration,
+// errors if unable to listen to port given in the config
 func Start(conf GochatConfig, db *GochatDB) (*Server, error) {
 	server := &Server{
 		Clients:  map[string]*Client{},
 		Messages: make(chan Message),
-		DB: db,
+		DB:       db,
 	}
 
 	// Start listening for tcp connections at `Conf.Port`
@@ -108,6 +117,8 @@ func Start(conf GochatConfig, db *GochatDB) (*Server, error) {
 	return server, nil
 }
 
+// Accept is the event loop for accepting new connections onto the server.
+// If accepting new connection fails ignore and continue
 func (server Server) Accept() {
 	for {
 		conn, err := server.Listener.Accept()
@@ -120,8 +131,8 @@ func (server Server) Accept() {
 	}
 }
 
-// TODO: normalize format for sending messages to cchat, json?
-// Handles event loop for the server managing forwarding of messages to clients
+// Run first starts goroutine for accepting new clients onto the server then
+// handles event loop for the server managing forwarding of messages to clients
 func (server Server) Run() {
 	go server.Accept()
 

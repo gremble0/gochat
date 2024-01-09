@@ -11,6 +11,7 @@ import (
 // - Host multiple chats at once
 // - User authentication with usernames and passwords
 
+// GochatConfig contains some configuration options for the gochat server
 type GochatConfig struct {
 	Port string
 	dbc  DBConfig
@@ -29,6 +30,7 @@ func usage() {
 	os.Exit(1)
 }
 
+// parseConfig generates a config from a command line-like string array
 func parseConfig(args []string) GochatConfig {
 	// Set some defaults for the config
 	ret := GochatConfig{
@@ -70,6 +72,7 @@ func parseConfig(args []string) GochatConfig {
 	return ret
 }
 
+// main hosts the gochat server
 func main() {
 	conf := parseConfig(os.Args)
 
